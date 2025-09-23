@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phần Mềm Riêng Của Bé Tuệ Minh</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🏢 Phần Mềm Riêng Của Bé Tuệ Minh</h1>
+    
+    <!-- Thông báo -->
+    <div id="notification" class="hidden"></div>
+    
+    <!-- Thống kê -->
+    <div id="statisticsBox" class="stats-box">
+      <div class="stats-item">Đang tải thống kê...</div>
+    </div>
+    
+    <!-- Form thêm/sửa nhân viên -->
+    <div class="form-section">
+      <h2 id="formTitle">Thêm nhân viên mới</h2>
+      <form id="employeeForm">
+        <input type="hidden" id="employeeId">
+        <input type="hidden" id="serialNumber">
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="id">Mã nhân viên *</label>
+            <input type="text" id="id" required>
+          </div>
+          <div class="form-group">
+            <label for="fullName">Họ và tên *</label>
+            <input type="text" id="fullName" required>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="position">Chức vụ</label>
+            <select id="position">
+              <option value="">Chọn chức vụ</option>
+              <!-- Options sẽ được load từ config -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="department">Phòng ban</label>
+            <select id="department">
+              <option value="">Chọn phòng ban</option>
+              <!-- Options sẽ được load từ config -->
+            </select>
+          </div>
+        </div>
+        
+        <div>
+          <button type="submit" class="btn btn-success" id="submitBtn">Thêm nhân viên</button>
+          <button type="button" class="btn btn-secondary" id="cancelBtn">Hủy</button>
+          <button type="button" class="btn btn-warning" id="exportBtn">📊 Xuất Excel</button>
+          <button type="button" class="btn btn-primary" id="refreshBtn">🔄 Tải lại</button>
+          <button type="button" class="btn btn-info" id="backupBtn">💾 Backup</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Debug Controls -->
+    <div class="debug-section">
+      <h3>🔧 Debug Controls</h3>
+      <div class="debug-controls">
+        <button type="button" class="btn btn-debug" id="configInfoBtn">📋 Xem Cấu Hình</button>
+        <button type="button" class="btn btn-debug" id="toggleHeaderBtn">🔄 Toggle Header Mode</button>
+        <button type="button" class="btn btn-debug" id="createSampleNoHeaderBtn">📄 Tạo File Mẫu (Không Header)</button>
+        <button type="button" class="btn btn-debug" id="createSampleWithHeaderBtn">📄 Tạo File Mẫu (Có Header)</button>
+      </div>
+      <div id="debugOutput" class="debug-output hidden"></div>
+    </div>
+    
+    <!-- Danh sách nhân viên -->
+    <div class="table-section">
+      <div class="controls-section">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Tìm kiếm nhân viên..." />
+        </div>
+        
+        <div class="filter-box">
+          <select id="filterDepartment">
+            <option value="">Tất cả phòng ban</option>
+            <!-- Options sẽ được load từ config -->
+          </select>
+          
+          <select id="filterPosition">
+            <option value="">Tất cả chức vụ</option>
+            <!-- Options sẽ được load từ config -->
+          </select>
+          
+          <select id="filterStatus">
+            <option value="">Tất cả trạng thái</option>
+            <!-- Options sẽ được load từ config -->
+          </select>
+          
+          <button type="button" class="btn btn-secondary" onclick="employeeManager.clearFilters()">
+            Xóa bộ lọc
+          </button>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <span>Tổng số: <strong id="totalCount">0</strong> nhân viên</span>
+      </div>
+      
+      <div id="loadingIndicator" class="loading hidden">Đang tải dữ liệu...</div>
+      
+      <div class="table-container">
+        <table id="employeeTable">
+          <thead>
+            <tr>
+              <th>STT</th>
+              <th>Mã NV</th>
+              <th>Họ và tên</th>
+              <th>Chức vụ</th>
+              <th>Phòng ban</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="employeeTableBody">
+            <!-- Dữ liệu sẽ được load động -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/employeeService.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

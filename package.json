@@ -1,0 +1,28 @@
+{
+  "name": "hrm-tueminh",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phamdaiminhquan/HRM-TUEMINH.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/phamdaiminhquan/HRM-TUEMINH/issues"
+  },
+  "homepage": "https://github.com/phamdaiminhquan/HRM-TUEMINH#readme",
+  "devDependencies": {
+    "electron": "^38.1.2"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
