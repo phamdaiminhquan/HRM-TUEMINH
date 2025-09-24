@@ -151,5 +151,15 @@ class EmployeeService {
   }
 }
 
-// Khởi tạo service
-window.employeeService = new EmployeeService();
+// Khởi tạo service và export cho cả module và window
+const employeeServiceInstance = new EmployeeService();
+
+// Export cho module system
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = employeeServiceInstance;
+}
+
+// Export cho window object (browser)
+if (typeof window !== 'undefined') {
+  window.employeeService = employeeServiceInstance;
+}

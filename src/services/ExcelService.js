@@ -427,7 +427,7 @@ class ExcelService {
    */
   readDataWithConfig(config) {
     try {
-      const { filePath, sheetName, skipRows = 0, takeRows = 0, columnCount = 5, hasHeaders = false } = config;
+      const { filePath, sheetName, skipRows = 0, takeRows = 0} = config;
       
       if (!fs.existsSync(filePath)) {
         throw new Error('File không tồn tại');
@@ -459,7 +459,7 @@ class ExcelService {
         const rowData = {};
         
         // Sử dụng custom headers hoặc generate tự động
-        for (let i = 0; i < Math.min(columnCount, customHeaders.length); i++) {
+        for (let i = 0; i < 5; i++) {
           const headerName = customHeaders[i] || `column${i + 1}`;
           rowData[headerName] = row[i] || '';
         }
