@@ -338,6 +338,63 @@ class EmployeeController {
       };
     }
   }
+
+  /**
+   * Lấy danh sách sheets từ file Excel
+   */
+  async getExcelSheets(event, filePath) {
+    try {
+      const sheets = await this.employeeService.getExcelSheets(filePath);
+      return {
+        success: true,
+        data: sheets
+      };
+    } catch (error) {
+      console.error('Error getting Excel sheets:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Xem trước dữ liệu Excel với cấu hình
+   */
+  async previewExcelData(event, config) {
+    try {
+      const preview = await this.employeeService.previewExcelData(config);
+      return {
+        success: true,
+        data: preview
+      };
+    } catch (error) {
+      console.error('Error previewing Excel data:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Đọc dữ liệu Excel với cấu hình tùy chỉnh
+   */
+  async readExcelWithConfig(event, config) {
+    try {
+      const result = await this.employeeService.readExcelWithConfig(config);
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Error reading Excel with config:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
 }
 
 module.exports = EmployeeController;

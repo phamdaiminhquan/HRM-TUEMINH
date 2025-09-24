@@ -14,70 +14,75 @@
     <div id="notification" class="hidden"></div>
     
     <!-- Thống kê -->
-    <div id="statisticsBox" class="stats-box">
+    <div id="statisticsBox" class="stats-box hidden">
       <div class="stats-item">Đang tải thống kê...</div>
     </div>
-    
-    <!-- Form thêm/sửa nhân viên -->
-    <div class="form-section">
-      <h2 id="formTitle">Thêm nhân viên mới</h2>
-      <form id="employeeForm">
-        <input type="hidden" id="employeeId">
-        <input type="hidden" id="serialNumber">
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label for="id">Mã nhân viên *</label>
-            <input type="text" id="id" required>
-          </div>
-          <div class="form-group">
-            <label for="fullName">Họ và tên *</label>
-            <input type="text" id="fullName" required>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label for="position">Chức vụ</label>
-            <select id="position">
-              <option value="">Chọn chức vụ</option>
-              <!-- Options sẽ được load từ config -->
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="department">Phòng ban</label>
-            <select id="department">
-              <option value="">Chọn phòng ban</option>
-              <!-- Options sẽ được load từ config -->
-            </select>
-          </div>
-        </div>
-        
-        <div>
-          <button type="submit" class="btn btn-success" id="submitBtn">Thêm nhân viên</button>
-          <button type="button" class="btn btn-secondary" id="cancelBtn">Hủy</button>
-          <button type="button" class="btn btn-warning" id="exportBtn">📊 Xuất Excel</button>
-          <button type="button" class="btn btn-primary" id="refreshBtn">🔄 Tải lại</button>
-          <button type="button" class="btn btn-info" id="backupBtn">💾 Backup</button>
-        </div>
-      </form>
-    </div>
 
-    <!-- Debug Controls -->
-    <div class="debug-section">
-      <h3>🔧 Debug Controls</h3>
-      <div class="debug-controls">
-        <button type="button" class="btn btn-debug" id="configInfoBtn">📋 Xem Cấu Hình</button>
-        <button type="button" class="btn btn-debug" id="toggleHeaderBtn">🔄 Toggle Header Mode</button>
-        <button type="button" class="btn btn-debug" id="createSampleNoHeaderBtn">📄 Tạo File Mẫu (Không Header)</button>
-        <button type="button" class="btn btn-debug" id="createSampleWithHeaderBtn">📄 Tạo File Mẫu (Có Header)</button>
+    <!-- File Selection & Configuration -->
+    <div class="file-config-section">
+      <h3>📁 Bắt đầu mình cấu hình File Excel một tí</h3>
+      
+      <!-- File Selection -->
+      <div class="file-selection">
+        <div class="form-group">
+          <label>Bé chọn đi:</label>
+          <div class="file-input-group">
+            <input type="text" id="selectedFilePath" readonly placeholder="Bé chưa chọn file...">
+            <button type="button" class="btn btn-primary" id="selectFileBtn">📂 Bấm đây nè bé</button>
+          </div>
+        </div>
       </div>
-      <div id="debugOutput" class="debug-output hidden"></div>
+
+      <!-- Sheet Selection -->
+      <div class="sheet-selection hidden">
+        <div class="form-group">
+          <label for="sheetSelect">Chọn file xong rồi giờ mình chọn Sheet:</label>
+          <div class="sheet-input-group">
+            <select id="sheetSelect">
+              <option value="">-- Bấm vào đây để chọn Sheet nè --</option>
+            </select>
+            <button type="button" class="btn btn-warning" id="reloadSheetsBtn">🔄 Rì Loát</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reading Configuration -->
+      <div class="reading-config hidden">
+        <h4>⚙️ Bé cài đặt cấu hình cho nó nha</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="skipRows">Bé nhập số dòng anh cần bỏ qua (bỏ qua mấy dòng đầu không có dữ liệu á):</label>
+            <input type="number" id="skipRows" value="5" min="0" max="100">
+          </div>
+          <div class="form-group">
+            <label for="takeRows">Bé nhập số dòng anh cần lấy (để 0 là lấy hết luôn):</label>
+            <input type="number" id="takeRows" value="0" min="0" placeholder="0 là đọc hết sheet">
+          </div>
+        </div>
+        <div class="config-actions">
+          <button type="button" class="btn btn-warning" id="previewDataBtn">👁️ Xem Trước</button>
+          <button type="button" class="btn btn-success" id="readDataBtn">📖 Lấy Dữ Liệu</button>
+          <button type="button" class="btn btn-secondary" id="resetFileBtn">🔄 Chọn File Khác</button>
+        </div>
+      </div>
+
+      <!-- Preview Area -->
+      <div id="dataPreview" class="data-preview hidden">
+        <h4>👁️ Xem Trước Dữ Liệu</h4>
+        <div id="previewContent"></div>
+      </div>
     </div>
     
     <!-- Danh sách nhân viên -->
-    <div class="table-section">
+    <div class="table-section hidden">
       <div class="controls-section">
+        <div class="table-header">
+          <h3>👥 Danh Sách Nhân Viên</h3>
+          <button type="button" class="btn btn-success" id="addEmployeeBtn">
+            ➕ Thêm Nhân Viên
+          </button>
+        </div>
+        
         <div class="search-box">
           <input type="text" id="searchInput" placeholder="Tìm kiếm nhân viên..." />
         </div>
@@ -85,17 +90,14 @@
         <div class="filter-box">
           <select id="filterDepartment">
             <option value="">Tất cả phòng ban</option>
-            <!-- Options sẽ được load từ config -->
           </select>
           
           <select id="filterPosition">
             <option value="">Tất cả chức vụ</option>
-            <!-- Options sẽ được load từ config -->
           </select>
           
           <select id="filterStatus">
             <option value="">Tất cả trạng thái</option>
-            <!-- Options sẽ được load từ config -->
           </select>
           
           <button type="button" class="btn btn-secondary" onclick="employeeManager.clearFilters()">
@@ -111,7 +113,7 @@
       <div id="loadingIndicator" class="loading hidden">Đang tải dữ liệu...</div>
       
       <div class="table-container">
-        <table id="employeeTable">
+        <table id="employeeTable" class="employee-table">
           <thead>
             <tr>
               <th>STT</th>
@@ -119,13 +121,58 @@
               <th>Họ và tên</th>
               <th>Chức vụ</th>
               <th>Phòng ban</th>
-              <th>Thao tác</th>
             </tr>
           </thead>
           <tbody id="employeeTableBody">
             <!-- Dữ liệu sẽ được load động -->
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Employee Modal -->
+  <div id="employeeModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Thêm Nhân Viên Mới</h3>
+        <span class="close" id="closeModal">&times;</span>
+      </div>
+      
+      <div class="modal-body">
+        <form id="employeeModalForm">
+          <div class="form-group">
+            <label for="modalId">Mã Nhân Viên:</label>
+            <input type="text" id="modalId" name="id" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="modalFullName">Họ và Tên:</label>
+            <input type="text" id="modalFullName" name="fullName" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="modalPosition">Chức Vụ:</label>
+            <select id="modalPosition" name="position">
+              <option value="">Chọn chức vụ</option>
+              <!-- Options sẽ được load từ config -->
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="modalDepartment">Phòng Ban:</label>
+            <select id="modalDepartment" name="department">
+              <option value="">Chọn phòng ban</option>
+              <!-- Options sẽ được load từ config -->
+            </select>
+          </div>
+        </form>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" id="saveEmployeeBtn">💾 Lưu</button>
+        <button type="button" class="btn btn-danger" id="deleteEmployeeBtn" style="display: none;">🗑️ Xóa</button>
+        <button type="button" class="btn btn-secondary" id="cancelModalBtn">❌ Hủy</button>
       </div>
     </div>
   </div>

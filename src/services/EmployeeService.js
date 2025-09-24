@@ -58,17 +58,19 @@ class EmployeeService {
       // Lấy danh sách hiện tại
       const employees = await this.getAllEmployees();
 
-      // Kiểm tra email trùng lặp
-      const emailExists = employees.some(emp => 
-        emp.email.toLowerCase() === employee.email.toLowerCase()
-      );
-      if (emailExists) {
-        throw new Error('Email đã tồn tại trong hệ thống');
+      // Kiểm tra ID trùng lặp (nếu đã có ID)
+      if (employee.id) {
+        const idExists = employees.some(emp => 
+          emp.id && emp.id.toString() === employee.id.toString()
+        );
+        if (idExists) {
+          throw new Error('Mã nhân viên đã tồn tại trong hệ thống');
+        }
+      } else {
+        // Tạo ID mới nếu chưa có
+        const maxId = employees.length > 0 ? Math.max(...employees.map(emp => emp.id || 0)) : 0;
+        employee.id = maxId + 1;
       }
-
-      // Tạo ID mới
-      const maxId = employees.length > 0 ? Math.max(...employees.map(emp => emp.id || 0)) : 0;
-      employee.id = maxId + 1;
 
       // Thêm vào danh sách
       employees.push(employee);
@@ -108,12 +110,12 @@ class EmployeeService {
         throw new Error(`Dữ liệu không hợp lệ: ${validation.errors.join(', ')}`);
       }
 
-      // Kiểm tra email trùng lặp (trừ chính nó)
-      const emailExists = employees.some(emp => 
-        emp.id !== id && emp.email.toLowerCase() === employee.email.toLowerCase()
+      // Kiểm tra ID trùng lặp (trừ chính nó)
+      const idExists = employees.some(emp => 
+        emp.id !== id && emp.id && emp.id.toString() === employee.id.toString()
       );
-      if (emailExists) {
-        throw new Error('Email đã tồn tại trong hệ thống');
+      if (idExists) {
+        throw new Error('Mã nhân viên đã tồn tại trong hệ thống');
       }
 
       // Lưu vào Excel
@@ -169,8 +171,7 @@ class EmployeeService {
       
       return employees.filter(employee => 
         employee.fullName.toLowerCase().includes(term) ||
-        employee.email.toLowerCase().includes(term) ||
-        (employee.phone && employee.phone.includes(term)) ||
+        (employee.id && employee.id.toString().toLowerCase().includes(term)) ||
         (employee.position && employee.position.toLowerCase().includes(term)) ||
         (employee.department && employee.department.toLowerCase().includes(term))
       );
@@ -196,19 +197,6 @@ class EmployeeService {
 
         // Lọc theo chức vụ
         if (filters.position && employee.position !== filters.position) {
-          return false;
-        }
-
-        // Lọc theo trạng thái
-        if (filters.status && employee.status !== filters.status) {
-          return false;
-        }
-
-        // Lọc theo khoảng lương
-        if (filters.minSalary && employee.salary < filters.minSalary) {
-          return false;
-        }
-        if (filters.maxSalary && employee.salary > filters.maxSalary) {
           return false;
         }
 
@@ -241,17 +229,13 @@ class EmployeeService {
 
       // Chuyển đổi dữ liệu để xuất
       const exportData = employees.map(emp => ({
-        'ID': emp.id,
+        'STT': emp.serialNumber,
+        'Mã NV': emp.id,
         'Họ và tên': emp.fullName,
-        'Email': emp.email,
-        'Điện thoại': emp.phone || '',
         'Chức vụ': emp.position || '',
         'Phòng ban': emp.department || '',
-        'Lương': emp.salary ? emp.getFormattedSalary() : '',
-        'Ngày bắt đầu': emp.startDate || '',
-        'Trạng thái': emp.status,
-        'Ngày tạo': emp.getFormattedDate('createdAt'),
-        'Ngày cập nhật': emp.getFormattedDate('updatedAt')
+        'Ngày tạo': emp.getFormattedDate ? emp.getFormattedDate('createdAt') : emp.createdAt,
+        'Ngày cập nhật': emp.getFormattedDate ? emp.getFormattedDate('updatedAt') : emp.updatedAt
       }));
 
       return this.excelService.exportData(exportData, exportPath);
@@ -282,20 +266,11 @@ class EmployeeService {
       
       const stats = {
         total: employees.length,
-        byStatus: {},
         byDepartment: {},
-        byPosition: {},
-        averageSalary: 0,
-        totalSalary: 0
+        byPosition: {}
       };
 
-      let totalSalary = 0;
-      let countWithSalary = 0;
-
       employees.forEach(emp => {
-        // Thống kê theo trạng thái
-        stats.byStatus[emp.status] = (stats.byStatus[emp.status] || 0) + 1;
-
         // Thống kê theo phòng ban
         if (emp.department) {
           stats.byDepartment[emp.department] = (stats.byDepartment[emp.department] || 0) + 1;
@@ -305,16 +280,7 @@ class EmployeeService {
         if (emp.position) {
           stats.byPosition[emp.position] = (stats.byPosition[emp.position] || 0) + 1;
         }
-
-        // Tính lương
-        if (emp.salary) {
-          totalSalary += emp.salary;
-          countWithSalary++;
-        }
       });
-
-      stats.totalSalary = totalSalary;
-      stats.averageSalary = countWithSalary > 0 ? Math.round(totalSalary / countWithSalary) : 0;
 
       return stats;
     } catch (error) {
@@ -367,6 +333,46 @@ class EmployeeService {
       return this.excelService.getConfigInfo();
     } catch (error) {
       throw new Error(`Không thể lấy thông tin cấu hình: ${error.message}`);
+    }
+  }
+
+  /**
+   * Lấy danh sách sheets từ file Excel
+   * @param {string} filePath - Đường dẫn file Excel
+   * @returns {Array} Danh sách tên sheets
+   */
+  async getExcelSheets(filePath) {
+    try {
+      return this.excelService.getExcelSheets(filePath);
+    } catch (error) {
+      throw new Error(`Không thể lấy danh sách sheets: ${error.message}`);
+    }
+  }
+
+  /**
+   * Xem trước dữ liệu Excel
+   * @param {Object} config - Cấu hình đọc file
+   * @returns {Object} Dữ liệu preview
+   */
+  async previewExcelData(config) {
+    try {
+      return this.excelService.previewExcelData(config);
+    } catch (error) {
+      throw new Error(`Không thể xem trước dữ liệu: ${error.message}`);
+    }
+  }
+
+  /**
+   * Đọc dữ liệu Excel với cấu hình tùy chỉnh
+   * @param {Object} config - Cấu hình đọc file
+   * @returns {Array} Dữ liệu nhân viên
+   */
+  async readExcelWithConfig(config) {
+    try {
+      const data = this.excelService.readDataWithConfig(config);
+      return data.map(item => Employee.fromObject(item));
+    } catch (error) {
+      throw new Error(`Không thể đọc dữ liệu Excel: ${error.message}`);
     }
   }
 }

@@ -58,6 +58,36 @@ function setupIPC() {
     }
   }));
 
+  // File Management APIs
+  ipcMain.handle('file:selectExcel', async (event) => {
+    const { dialog } = require('electron');
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Excel Files', extensions: ['xlsx', 'xls'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    
+    return {
+      success: !result.canceled,
+      filePath: result.canceled ? null : result.filePaths[0],
+      canceled: result.canceled
+    };
+  });
+
+  ipcMain.handle('file:getSheets', (event, filePath) => 
+    employeeController.getExcelSheets(event, filePath)
+  );
+
+  ipcMain.handle('file:previewData', (event, config) => 
+    employeeController.previewExcelData(event, config)
+  );
+
+  ipcMain.handle('file:readWithConfig', (event, config) => 
+    employeeController.readExcelWithConfig(event, config)
+  );
+
   // Debug APIs
   ipcMain.handle('employee:createSampleWithoutHeaders', (event) => 
     employeeController.createSampleFileWithoutHeaders(event)

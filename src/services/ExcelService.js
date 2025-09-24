@@ -350,9 +350,135 @@ class ExcelService {
       hasHeaderRow: config.excel.hasHeaderRow,
       customHeaders: config.excel.customHeaders,
       headerMapping: config.excel.headerMapping,
+      skipRows: config.excel.skipRows,
       filePath: this.filePath,
       sheetName: this.sheetName
     };
+  }
+
+  /**
+   * Lấy danh sách sheets từ file Excel
+   * @param {string} filePath - Đường dẫn file Excel
+   * @returns {Array} Danh sách tên sheets
+   */
+  getExcelSheets(filePath) {
+    try {
+      if (!fs.existsSync(filePath)) {
+        throw new Error('File không tồn tại');
+      }
+
+      const workbook = XLSX.readFile(filePath);
+      return workbook.SheetNames;
+    } catch (error) {
+      console.error('Error getting Excel sheets:', error);
+      throw new Error(`Không thể đọc file Excel: ${error.message}`);
+    }
+  }
+
+  /**
+   * Xem trước dữ liệu Excel với cấu hình
+   * @param {Object} config - Cấu hình đọc
+   * @returns {Object} Dữ liệu preview
+   */
+  previewExcelData(config) {
+    try {
+      const { filePath, sheetName, skipRows = 0, takeRows = 10, columnCount = 5, hasHeaders = false } = config;
+      
+      if (!fs.existsSync(filePath)) {
+        throw new Error('File không tồn tại');
+      }
+
+      const workbook = XLSX.readFile(filePath);
+      
+      if (!workbook.SheetNames.includes(sheetName)) {
+        throw new Error(`Sheet "${sheetName}" không tồn tại`);
+      }
+
+      const worksheet = workbook.Sheets[sheetName];
+      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Áp dụng skipRows
+      const dataAfterSkip = rawData.slice(skipRows);
+      
+      // Áp dụng takeRows (nếu được chỉ định)
+      const dataToShow = takeRows > 0 ? dataAfterSkip.slice(0, takeRows) : dataAfterSkip.slice(0, 20); // Tối đa 20 dòng preview
+      
+      // Áp dụng columnCount
+      const limitedData = dataToShow.map(row => row.slice(0, columnCount));
+
+      return {
+        totalRows: rawData.length,
+        totalColumns: rawData[0] ? rawData[0].length : 0,
+        previewRows: limitedData.length,
+        previewColumns: columnCount,
+        data: limitedData,
+        config: config
+      };
+    } catch (error) {
+      console.error('Error previewing Excel data:', error);
+      throw new Error(`Không thể xem trước dữ liệu: ${error.message}`);
+    }
+  }
+
+  /**
+   * Đọc dữ liệu Excel với cấu hình tùy chỉnh
+   * @param {Object} config - Cấu hình đọc
+   * @returns {Array} Dữ liệu đã được xử lý
+   */
+  readDataWithConfig(config) {
+    try {
+      const { filePath, sheetName, skipRows = 0, takeRows = 0, columnCount = 5, hasHeaders = false } = config;
+      
+      if (!fs.existsSync(filePath)) {
+        throw new Error('File không tồn tại');
+      }
+
+      const workbook = XLSX.readFile(filePath);
+      
+      if (!workbook.SheetNames.includes(sheetName)) {
+        throw new Error(`Sheet "${sheetName}" không tồn tại`);
+      }
+
+      const worksheet = workbook.Sheets[sheetName];
+      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Áp dụng skipRows
+      let dataAfterSkip = rawData.slice(skipRows);
+      
+      // Áp dụng takeRows (nếu được chỉ định)
+      if (takeRows > 0) {
+        dataAfterSkip = dataAfterSkip.slice(0, takeRows);
+      }
+
+      const result = [];
+      const customHeaders = ['serialNumber', 'id', 'fullName', 'position', 'department'];
+
+      dataAfterSkip.forEach((row, index) => {
+        if (row.length === 0) return; // Bỏ qua row trống
+        
+        const rowData = {};
+        
+        // Sử dụng custom headers hoặc generate tự động
+        for (let i = 0; i < Math.min(columnCount, customHeaders.length); i++) {
+          const headerName = customHeaders[i] || `column${i + 1}`;
+          rowData[headerName] = row[i] || '';
+        }
+        
+        // Chỉ thêm row nếu có ít nhất một field không rỗng
+        if (Object.values(rowData).some(value => value !== '')) {
+          // Tự động tạo serialNumber nếu không có
+          if (!rowData.serialNumber) {
+            rowData.serialNumber = index + 1;
+          }
+          result.push(rowData);
+        }
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error reading Excel with config:', error);
+      throw new Error(`Không thể đọc dữ liệu Excel: ${error.message}`);
+    }
   }
 }
 

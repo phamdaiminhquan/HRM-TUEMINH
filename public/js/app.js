@@ -3,6 +3,7 @@
  * Quản lý tất cả logic UI cho nhân viên
  */
 
+
 class EmployeeManager {
   constructor() {
     this.employees = [];
@@ -10,6 +11,8 @@ class EmployeeManager {
     this.currentFilters = {};
     this.currentSearchTerm = '';
     this.appConfig = {};
+    this.modalMode = 'add'; // 'add' hoặc 'edit'
+    this.currentEmployee = null;
     
     this.init();
   }
@@ -20,19 +23,18 @@ class EmployeeManager {
       const configResult = await employeeService.getAppConfig();
       if (configResult.success) {
         this.appConfig = configResult.data;
-        this.populateSelectOptions();
+        // Don't populate select options yet - wait for user to select file
       }
 
       // Setup event listeners
       this.setupEventListeners();
       
-      // Load initial data
-      await this.loadEmployees();
+      // Don't load initial data - user needs to select file first
       
-      Utils.showNotification('Ứng dụng đã sẵn sàng!', 'success');
+      Utils.showNotification('Giờ bé TM chọn file excel nha!', 'info');
     } catch (error) {
       console.error('Error initializing app:', error);
-      Utils.showNotification('Có lỗi khi khởi tạo ứng dụng!', 'error');
+      Utils.showNotification('Có lỗi khi khởi tạo ứng dụng!' + error.message, 'error');
     }
   }
 
@@ -99,6 +101,41 @@ class EmployeeManager {
     if (refreshBtn) {
       refreshBtn.addEventListener('click', this.loadEmployees.bind(this));
     }
+
+    // Add Employee button
+    const addEmployeeBtn = document.getElementById('addEmployeeBtn');
+    if (addEmployeeBtn) {
+      addEmployeeBtn.addEventListener('click', this.openAddModal.bind(this));
+    }
+
+    // Modal buttons
+    const closeModal = document.getElementById('closeModal');
+    if (closeModal) {
+      closeModal.addEventListener('click', this.closeModal.bind(this));
+    }
+
+    const cancelModalBtn = document.getElementById('cancelModalBtn');
+    if (cancelModalBtn) {
+      cancelModalBtn.addEventListener('click', this.closeModal.bind(this));
+    }
+
+    const saveEmployeeBtn = document.getElementById('saveEmployeeBtn');
+    if (saveEmployeeBtn) {
+      saveEmployeeBtn.addEventListener('click', this.saveEmployee.bind(this));
+    }
+
+    const deleteEmployeeBtn = document.getElementById('deleteEmployeeBtn');
+    if (deleteEmployeeBtn) {
+      deleteEmployeeBtn.addEventListener('click', this.deleteEmployeeFromModal.bind(this));
+    }
+
+    // Close modal when clicking outside
+    window.addEventListener('click', (event) => {
+      const modal = document.getElementById('employeeModal');
+      if (event.target === modal) {
+        this.closeModal();
+      }
+    });
 
     // Backup button
     const backupBtn = document.getElementById('backupBtn');
@@ -187,25 +224,17 @@ class EmployeeManager {
     if (!tbody) return;
 
     if (employeeList.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Chưa có nhân viên nào</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Chưa có nhân viên nào</td></tr>';
       return;
     }
 
     tbody.innerHTML = employeeList.map(employee => `
-      <tr>
+      <tr onclick="employeeManager.openEditModal('${employee.id}')" class="employee-row">
         <td>${employee.serialNumber || ''}</td>
         <td>${Utils.escapeHtml(employee.id || '')}</td>
         <td>${Utils.escapeHtml(employee.fullName)}</td>
         <td>${Utils.escapeHtml(employee.position || '')}</td>
         <td>${Utils.escapeHtml(employee.department || '')}</td>
-        <td class="actions">
-          <button class="btn btn-warning btn-sm" onclick="employeeManager.editEmployee('${employee.id}')" title="Chỉnh sửa">
-            ✏️
-          </button>
-          <button class="btn btn-danger btn-sm" onclick="employeeManager.deleteEmployee('${employee.id}')" title="Xóa">
-            🗑️
-          </button>
-        </td>
       </tr>
     `).join('');
 
@@ -637,6 +666,509 @@ class EmployeeManager {
     const createSampleWithHeaderBtn = document.getElementById('createSampleWithHeaderBtn');
     if (createSampleWithHeaderBtn) {
       createSampleWithHeaderBtn.addEventListener('click', () => this.createSampleFileWithHeaders());
+    }
+
+    // File configuration event listeners
+    this.setupFileConfigListeners();
+  }
+
+  /**
+   * Setup file configuration event listeners
+   */
+  setupFileConfigListeners() {
+    // Select file button
+    const selectFileBtn = document.getElementById('selectFileBtn');
+    if (selectFileBtn) {
+      selectFileBtn.addEventListener('click', () => this.selectExcelFile());
+    }
+
+    // Load sheets button -> Reload sheets button
+    const reloadSheetsBtn = document.getElementById('reloadSheetsBtn');
+    if (reloadSheetsBtn) {
+      reloadSheetsBtn.addEventListener('click', () => this.loadExcelSheets());
+    }
+
+    // Preview data button
+    const previewDataBtn = document.getElementById('previewDataBtn');
+    if (previewDataBtn) {
+      previewDataBtn.addEventListener('click', () => this.previewExcelData());
+    }
+
+    // Read data button
+    const readDataBtn = document.getElementById('readDataBtn');
+    if (readDataBtn) {
+      readDataBtn.addEventListener('click', () => this.readExcelData());
+    }
+
+    // Reset file button
+    const resetFileBtn = document.getElementById('resetFileBtn');
+    if (resetFileBtn) {
+      resetFileBtn.addEventListener('click', () => this.resetFileSelection());
+    }
+
+    // Sheet select change
+    const sheetSelect = document.getElementById('sheetSelect');
+    if (sheetSelect) {
+      sheetSelect.addEventListener('change', () => this.onSheetSelected());
+    }
+  }
+
+  /**
+   * Chọn file Excel
+   */
+  async selectExcelFile() {
+    try {
+      const result = await employeeService.selectExcelFile();
+      
+      if (result.success && result.filePath) {
+        document.getElementById('selectedFilePath').value = result.filePath;
+        this.selectedFilePath = result.filePath;
+        
+        // Show sheet selection section
+        document.querySelector('.sheet-selection').classList.remove('hidden');
+        
+        // Tự động load danh sách sheets
+        await this.loadExcelSheets();
+        
+        Utils.showNotification('Yay! bé chọn: ' + result.filePath, 'success');
+      } else if (result.canceled) {
+        Utils.showNotification('Anh không chọn được file này, huhu', 'info');
+      }
+    } catch (error) {
+      console.error('Error selecting file:', error);
+      Utils.showNotification('Lỗi anh, anh vô dụng, anh xin lỗi: ' + error.message, 'error');
+    }
+  }
+
+  /**
+   * Lấy danh sách sheets
+   */
+  async loadExcelSheets() {
+    if (!this.selectedFilePath) {
+      Utils.showNotification('Bé chọn file Excel trước nha!', 'error');
+      return;
+    }
+
+    Utils.showLoading(true);
+    
+    try {
+      const result = await employeeService.getExcelSheets(this.selectedFilePath);
+      
+      if (result.success) {
+        const sheetSelect = document.getElementById('sheetSelect');
+        sheetSelect.innerHTML = '<option value="">-- Chọn Sheet --</option>';
+        
+        result.data.forEach(sheetName => {
+          const option = document.createElement('option');
+          option.value = sheetName;
+          option.textContent = sheetName;
+          sheetSelect.appendChild(option);
+        });
+        
+        Utils.showNotification(`Đã tải ${result.data.length} sheets`, 'success');
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Error loading sheets:', error);
+      Utils.showNotification('Lỗi anh, anh vô dụng: ' + error.message, 'error');
+    } finally {
+      Utils.showLoading(false);
+    }
+  }
+
+  /**
+   * Khi chọn sheet
+   */
+  onSheetSelected() {
+    const sheetSelect = document.getElementById('sheetSelect');
+    if (sheetSelect.value) {
+      document.querySelector('.reading-config').classList.remove('hidden');
+      document.getElementById('previewDataBtn').disabled = false;
+      document.getElementById('readDataBtn').disabled = false;
+    } else {
+      document.querySelector('.reading-config').classList.add('hidden');
+      document.getElementById('dataPreview').classList.add('hidden');
+      document.getElementById('previewDataBtn').disabled = true;
+      document.getElementById('readDataBtn').disabled = true;
+    }
+  }
+
+  /**
+   * Lấy cấu hình đọc từ form
+   */
+  getReadingConfig() {
+    return {
+      filePath: this.selectedFilePath,
+      sheetName: document.getElementById('sheetSelect').value,
+      skipRows: parseInt(document.getElementById('skipRows').value) || 0,
+      takeRows: parseInt(document.getElementById('takeRows').value) || 0,
+      columnCount: 5,
+      hasHeaders: true
+    };
+  }
+
+  /**
+   * Xem trước dữ liệu Excel
+   */
+  async previewExcelData() {
+    const config = this.getReadingConfig();
+    
+    if (!config.filePath || !config.sheetName) {
+      Utils.showNotification('Bé chọn file và sheet trước nha!', 'error');
+      return;
+    }
+
+    Utils.showLoading(true);
+    
+    try {
+      const result = await employeeService.previewExcelData(config);
+      
+      if (result.success) {
+        this.showPreviewData(result.data);
+        Utils.showNotification('Cho bé xem trước nè!', 'success');
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Error previewing data:', error);
+      Utils.showNotification('Lỗi anh, anh vô dụng: ' + error.message, 'error');
+    } finally {
+      Utils.showLoading(false);
+    }
+  }
+
+  /**
+   * Hiển thị preview dữ liệu
+   */
+  showPreviewData(previewData) {
+    const previewDiv = document.getElementById('dataPreview');
+    const contentDiv = document.getElementById('previewContent');
+    
+    let html = `
+      <div style="margin-bottom: 15px;">
+        <strong>📊 Thống kê:</strong><br>
+        • File có ${previewData.totalRows} dòng, ${previewData.totalColumns} cột<br>
+        • Hiển thị ${previewData.previewRows} dòng đầu, ${previewData.previewColumns} cột<br>
+        • Cấu hình: Skip ${previewData.config.skipRows} dòng, Take ${previewData.config.takeRows || 'tất cả'} dòng
+      </div>
+    `;
+    
+    if (previewData.data.length > 0) {
+      html += '<table class="preview-table"><thead><tr>';
+      
+      // Headers
+      const maxCols = Math.max(...previewData.data.map(row => row.length));
+      for (let i = 0; i < maxCols; i++) {
+        html += `<th>Cột ${String.fromCharCode(65 + i)}</th>`;
+      }
+      html += '</tr></thead><tbody>';
+      
+      // Data rows
+      previewData.data.forEach((row, rowIndex) => {
+        html += '<tr>';
+        for (let i = 0; i < maxCols; i++) {
+          const cellValue = row[i] || '';
+          html += `<td>${Utils.escapeHtml(cellValue.toString())}</td>`;
+        }
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table>';
+    } else {
+      html += '<p class="text-muted">Không có dữ liệu để hiển thị</p>';
+    }
+    
+    contentDiv.innerHTML = html;
+    previewDiv.classList.remove('hidden');
+  }
+
+  /**
+   * Đọc dữ liệu Excel với cấu hình
+   */
+  async readExcelData() {
+    const config = this.getReadingConfig();
+    
+    if (!config.filePath || !config.sheetName) {
+      Utils.showNotification('Vui lòng chọn file và sheet!', 'error');
+      return;
+    }
+
+    Utils.showLoading(true);
+    
+    try {
+      const result = await employeeService.readExcelWithConfig(config);
+      
+      if (result.success) {
+        this.employees = result.data;
+        
+        // Show main application content after successful data load
+        this.showMainApplication();
+        
+        // Populate select options now that we have data
+        this.populateSelectOptions();
+        
+        this.renderEmployeeTable();
+        this.updateStatistics();
+        
+        Utils.showNotification(`Anh đọc được ${result.data.length} nhân viên từ Excel`, 'success');
+        
+        // Ẩn preview và scroll xuống table
+        document.getElementById('dataPreview').classList.add('hidden');
+        document.querySelector('.table-section').scrollIntoView({ behavior: 'smooth' });
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Error reading Excel data:', error);
+      Utils.showNotification('Lỗi anh, anh vô dụng: ' + error.message, 'error');
+    } finally {
+      Utils.showLoading(false);
+    }
+  }
+
+  /**
+   * Hiển thị ứng dụng chính sau khi load dữ liệu thành công
+   */
+  showMainApplication() {
+    // Show statistics
+    document.getElementById('statisticsBox').classList.remove('hidden');
+    
+    // Show form section
+    document.querySelector('.form-section').classList.remove('hidden');
+    
+    // Show table section
+    document.querySelector('.table-section').classList.remove('hidden');
+  }
+
+  /**
+   * Reset file selection and return to initial state
+   */
+  resetFileSelection() {
+    // Clear current file data
+    this.selectedFilePath = '';
+    this.employees = [];
+
+    // Reset form fields
+    document.getElementById('selectedFilePath').value = '';
+    document.getElementById('sheetSelect').innerHTML = '';
+    document.getElementById('skipRows').value = '5';
+    document.getElementById('takeRows').value = '';
+    
+    // Clear preview
+    const dataPreview = document.getElementById('dataPreview');
+    if (dataPreview) {
+      dataPreview.classList.add('hidden');
+      const previewContent = document.getElementById('previewContent');
+      if (previewContent) {
+        previewContent.innerHTML = '';
+      }
+    }
+
+    // Hide dependent sections
+    const sheetSelection = document.querySelector('.sheet-selection');
+    const readingConfig = document.querySelector('.reading-config');
+    if (sheetSelection) sheetSelection.classList.add('hidden');
+    if (readingConfig) readingConfig.classList.add('hidden');
+
+    // Hide main application
+    this.hideMainApplication();
+
+    // Reset button states
+    document.getElementById('loadSheetsBtn').disabled = true;
+    document.getElementById('previewDataBtn').disabled = true;
+    document.getElementById('readDataBtn').disabled = true;
+
+    Utils.showNotification('Anh dọn dẹp xong rồi, bé chọn file mới nha!', 'info');
+  }
+
+  /**
+   * Hide main application content
+   */
+  hideMainApplication() {
+    const elementsToHide = ['statisticsBox', 'form-section', 'table-section'];
+    elementsToHide.forEach(id => {
+      const element = document.getElementById(id) || document.querySelector(`.${id}`);
+      if (element) {
+        element.classList.add('hidden');
+      }
+    });
+  }
+
+  /**
+   * Open modal for adding new employee
+   */
+  openAddModal() {
+    this.modalMode = 'add';
+    this.currentEmployee = null;
+    
+    // Reset form
+    document.getElementById('employeeModalForm').reset();
+    
+    // Update modal title and buttons
+    document.getElementById('modalTitle').textContent = 'Bé bấm đây để thêm nhân viên mới nè';
+    document.getElementById('saveEmployeeBtn').textContent = '💾 Bấm đây là lưu';
+    document.getElementById('deleteEmployeeBtn').style.display = 'none';
+    
+    // Populate select options
+    this.populateModalSelectOptions();
+    
+    // Show modal
+    document.getElementById('employeeModal').style.display = 'block';
+  }
+
+  /**
+   * Open modal for editing employee
+   */
+  openEditModal(employeeId) {
+    const employee = this.employees.find(emp => emp.id === employeeId);
+    if (!employee) {
+      Utils.showNotification('Anh không tìm thấy nhân viên, huhu!', 'error');
+      return;
+    }
+
+    this.modalMode = 'edit';
+    this.currentEmployee = employee;
+    
+    // Fill form with employee data
+    document.getElementById('modalId').value = employee.id || '';
+    document.getElementById('modalFullName').value = employee.fullName || '';
+    document.getElementById('modalPosition').value = employee.position || '';
+    document.getElementById('modalDepartment').value = employee.department || '';
+    
+    // Update modal title and buttons
+    document.getElementById('modalTitle').textContent = 'Báo Cáo Bé, Đây Là Chi Tiết Nhân Viên';
+    document.getElementById('saveEmployeeBtn').textContent = '💾 Sửa luôn';
+    document.getElementById('deleteEmployeeBtn').style.display = 'block';
+    
+    // Populate select options
+    this.populateModalSelectOptions();
+    
+    // Show modal
+    document.getElementById('employeeModal').style.display = 'block';
+  }
+
+  /**
+   * Close modal
+   */
+  closeModal() {
+    document.getElementById('employeeModal').style.display = 'none';
+    this.currentEmployee = null;
+    this.modalMode = 'add';
+  }
+
+  /**
+   * Populate select options in modal
+   */
+  populateModalSelectOptions() {
+    // Positions
+    const positionSelect = document.getElementById('modalPosition');
+    if (positionSelect && this.appConfig.positions) {
+      const currentValue = positionSelect.value;
+      positionSelect.innerHTML = '<option value="">Chọn chức vụ</option>';
+      this.appConfig.positions.forEach(position => {
+        const option = document.createElement('option');
+        option.value = position;
+        option.textContent = position;
+        positionSelect.appendChild(option);
+      });
+      positionSelect.value = currentValue;
+    }
+
+    // Departments
+    const departmentSelect = document.getElementById('modalDepartment');
+    if (departmentSelect && this.appConfig.departments) {
+      const currentValue = departmentSelect.value;
+      departmentSelect.innerHTML = '<option value="">Chọn phòng ban</option>';
+      this.appConfig.departments.forEach(department => {
+        const option = document.createElement('option');
+        option.value = department;
+        option.textContent = department;
+        departmentSelect.appendChild(option);
+      });
+      departmentSelect.value = currentValue;
+    }
+  }
+
+  /**
+   * Save employee (add or update)
+   */
+  async saveEmployee() {
+    const form = document.getElementById('employeeModalForm');
+    const formData = new FormData(form);
+    
+    const employeeData = {
+      id: formData.get('id').trim(),
+      fullName: formData.get('fullName').trim(),
+      position: formData.get('position') || '',
+      department: formData.get('department') || ''
+    };
+
+    // Validation
+    if (!employeeData.fullName) {
+      Utils.showNotification('Bé chưa nhập họ và tên!', 'error');
+      return;
+    }
+    
+    if (!employeeData.id) {
+      Utils.showNotification('Bé chưa nhập mã nhân viên!', 'error');
+      return;
+    }
+
+    Utils.showLoading(true);
+    
+    try {
+      let result;
+      if (this.modalMode === 'edit' && this.currentEmployee) {
+        result = await employeeService.updateEmployee(this.currentEmployee.id, employeeData);
+      } else {
+        result = await employeeService.createEmployee(employeeData);
+      }
+      
+      if (result.success) {
+        Utils.showNotification(
+          this.modalMode === 'edit' ? 'Bé Cập nhật nhân viên thành công!' : 'Bé Thêm nhân viên thành công!',
+          'success'
+        );
+        this.closeModal();
+        await this.loadEmployees();
+      } else {
+        throw new Error(result.error || 'Unknown error');
+      }
+    } catch (error) {
+      console.error('Error saving employee:', error);
+      Utils.showNotification('Lỗi anh, anh vô dụngggg: ' + error.message, 'error');
+    } finally {
+      Utils.showLoading(false);
+    }
+  }
+
+  /**
+   * Delete employee from modal
+   */
+  async deleteEmployeeFromModal() {
+    if (!this.currentEmployee) return;
+
+    const confirmed = await Utils.confirm(`Bé chắc chắn muốn xóa "${this.currentEmployee.fullName}" hả ?`);
+    if (!confirmed) return;
+    
+    Utils.showLoading(true);
+    
+    try {
+      const result = await employeeService.deleteEmployee(this.currentEmployee.id);
+      
+      if (result.success) {
+        Utils.showNotification('Nhân viên pay màu', 'success');
+        this.closeModal();
+        await this.loadEmployees();
+      } else {
+        throw new Error(result.error || 'Unknown error');
+      }
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      Utils.showNotification('Có lỗi xảy ra: ' + error.message, 'error');
+    } finally {
+      Utils.showLoading(false);
     }
   }
 }
