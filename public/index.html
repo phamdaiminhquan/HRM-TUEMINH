@@ -1,18 +1,26 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phần Mềm Riêng Của Bé Tuệ Minh</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
+<script>
+  console.log('Renderer process running');
+  setTimeout(() => {
+    console.log('This will be debugged');
+  }, 1000);
+</script>
 <body>
+
   <div class="container">
     <h1>🏢 Phần Mềm Riêng Của Bé Tuệ Minh</h1>
-    
+
     <!-- Thông báo -->
     <div id="notification" class="hidden"></div>
-    
+
     <!-- Thống kê -->
     <div id="statisticsBox" class="stats-box hidden">
       <div class="stats-item">Đang tải thống kê...</div>
@@ -21,7 +29,7 @@
     <!-- File Selection & Configuration -->
     <div class="file-config-section">
       <h3>📁 Bắt đầu mình cấu hình File Excel một tí</h3>
-      
+
       <!-- File Selection -->
       <div class="file-selection">
         <div class="form-group">
@@ -72,7 +80,7 @@
         <div id="previewContent"></div>
       </div>
     </div>
-    
+
     <!-- Danh sách nhân viên -->
     <div class="table-section hidden">
       <div class="controls-section">
@@ -82,36 +90,36 @@
             ➕ Thêm Nhân Viên
           </button>
         </div>
-        
+
         <div class="search-box">
           <input type="text" id="searchInput" placeholder="Tìm kiếm nhân viên..." />
         </div>
-        
+
         <div class="filter-box">
           <select id="filterDepartment">
             <option value="">Tất cả phòng ban</option>
           </select>
-          
+
           <select id="filterPosition">
             <option value="">Tất cả chức vụ</option>
           </select>
-          
+
           <select id="filterStatus">
             <option value="">Tất cả trạng thái</option>
           </select>
-          
+
           <button type="button" class="btn btn-secondary" onclick="employeeManager.clearFilters()">
             Xóa bộ lọc
           </button>
         </div>
       </div>
-      
+
       <div style="margin-bottom: 15px;">
         <span>Tổng số: <strong id="totalCount">0</strong> nhân viên</span>
       </div>
-      
+
       <div id="loadingIndicator" class="loading hidden">Đang tải dữ liệu...</div>
-      
+
       <div class="table-container">
         <table id="employeeTable" class="employee-table">
           <thead>
@@ -138,19 +146,19 @@
         <h3 id="modalTitle">Thêm Nhân Viên Mới</h3>
         <span class="close" id="closeModal">&times;</span>
       </div>
-      
+
       <div class="modal-body">
         <form id="employeeModalForm">
           <div class="form-group">
             <label for="modalId">Mã Nhân Viên:</label>
             <input type="text" id="modalId" name="id" required>
           </div>
-          
+
           <div class="form-group">
             <label for="modalFullName">Họ và Tên:</label>
             <input type="text" id="modalFullName" name="fullName" required>
           </div>
-          
+
           <div class="form-group">
             <label for="modalPosition">Chức Vụ:</label>
             <select id="modalPosition" name="position">
@@ -158,7 +166,7 @@
               <!-- Options sẽ được load từ config -->
             </select>
           </div>
-          
+
           <div class="form-group">
             <label for="modalDepartment">Phòng Ban:</label>
             <select id="modalDepartment" name="department">
@@ -168,7 +176,7 @@
           </div>
         </form>
       </div>
-      
+
       <div class="modal-footer">
         <button type="button" class="btn btn-success" id="saveEmployeeBtn">💾 Lưu</button>
         <button type="button" class="btn btn-danger" id="deleteEmployeeBtn" style="display: none;">🗑️ Xóa</button>
@@ -179,7 +187,8 @@
 
   <!-- Scripts -->
   <script src="js/utils.js"></script>
-  <script src="js/employeeService.js"></script>
+  <script src="js/EmployeeService.fe.js"></script>
   <script src="js/app.js"></script>
 </body>
+
 </html>

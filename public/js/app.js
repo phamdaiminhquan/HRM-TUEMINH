@@ -3,7 +3,6 @@
  * Quản lý tất cả logic UI cho nhân viên
  */
 
-
 class EmployeeManager {
   constructor() {
     this.employees = [];
@@ -14,13 +13,16 @@ class EmployeeManager {
     this.modalMode = 'add'; // 'add' hoặc 'edit'
     this.currentEmployee = null;
     
+    // Alias for employeeService
+    this.employeeService = window.employeeService;
+    
     this.init();
   }
 
   async init() {
     try {
       // Load app config
-      const configResult = await employeeService.getAppConfig();
+      const configResult = await this.this.employeeService.getAppConfig();
       if (configResult.success) {
         this.appConfig = configResult.data;
         // Don't populate select options yet - wait for user to select file
@@ -198,7 +200,7 @@ class EmployeeManager {
     Utils.showLoading(true);
     
     try {
-      const result = await employeeService.getAllEmployees();
+      const result = await this.employeeService.getAllEmployees();
       
       if (result.success) {
         this.employees = result.data;
@@ -256,7 +258,7 @@ class EmployeeManager {
    */
   async updateStatistics() {
     try {
-      const result = await employeeService.getStatistics();
+      const result = await this.employeeService.getStatistics();
       
       if (result.success) {
         const stats = result.data;
@@ -293,9 +295,9 @@ class EmployeeManager {
     try {
       let result;
       if (this.editingEmployeeId) {
-        result = await employeeService.updateEmployee(this.editingEmployeeId, formData);
+        result = await this.employeeService.updateEmployee(this.editingEmployeeId, formData);
       } else {
-        result = await employeeService.createEmployee(formData);
+        result = await this.employeeService.createEmployee(formData);
       }
       
       if (result.success) {
@@ -401,7 +403,7 @@ class EmployeeManager {
     Utils.showLoading(true);
     
     try {
-      const result = await employeeService.deleteEmployee(id);
+      const result = await this.employeeService.deleteEmployee(id);
       
       if (result.success) {
         Utils.showNotification('Xóa nhân viên thành công!', 'success');
@@ -507,7 +509,7 @@ class EmployeeManager {
         searchTerm: this.currentSearchTerm
       };
       
-      const result = await employeeService.exportToExcel(options);
+      const result = await this.employeeService.exportToExcel(options);
       
       if (result.success && !result.canceled) {
         Utils.showNotification(`Xuất file thành công: ${result.filePath}`, 'success');
@@ -531,7 +533,7 @@ class EmployeeManager {
     Utils.showLoading(true);
     
     try {
-      const result = await employeeService.createBackup();
+      const result = await this.employeeService.createBackup();
       
       if (result.success) {
         Utils.showNotification(`Tạo backup thành công: ${result.backupPath}`, 'success');
@@ -565,7 +567,7 @@ class EmployeeManager {
    */
   async showConfigInfo() {
     try {
-      const result = await employeeService.getConfigInfo();
+      const result = await this.employeeService.getConfigInfo();
       if (result.success) {
         this.showDebugOutput('Thông tin cấu hình:', JSON.stringify(result.data, null, 2));
       } else {
@@ -581,7 +583,7 @@ class EmployeeManager {
    */
   async toggleHeaderMode() {
     try {
-      const result = await employeeService.toggleHeaderMode();
+      const result = await this.employeeService.toggleHeaderMode();
       if (result.success) {
         this.showDebugOutput('Toggle Header Mode:', 
           `${result.message}\nChế độ hiện tại: ${result.hasHeaderRow ? 'Có header row' : 'Không có header row'}`);
@@ -600,7 +602,7 @@ class EmployeeManager {
    */
   async createSampleFileWithoutHeaders() {
     try {
-      const result = await employeeService.createSampleFileWithoutHeaders();
+      const result = await this.employeeService.createSampleFileWithoutHeaders();
       if (result.success) {
         this.showDebugOutput('Tạo file mẫu không header:', result.message);
         await this.loadEmployees();
@@ -617,7 +619,7 @@ class EmployeeManager {
    */
   async createSampleFileWithHeaders() {
     try {
-      const result = await employeeService.createSampleFileWithHeaders();
+      const result = await this.employeeService.createSampleFileWithHeaders();
       if (result.success) {
         this.showDebugOutput('Tạo file mẫu có header:', result.message);
         await this.loadEmployees();
@@ -691,7 +693,10 @@ class EmployeeManager {
     // Preview data button
     const previewDataBtn = document.getElementById('previewDataBtn');
     if (previewDataBtn) {
+      console.log('Adding click listener to previewDataBtn');
       previewDataBtn.addEventListener('click', () => this.previewExcelData());
+    } else {
+      console.log('previewDataBtn not found!');
     }
 
     // Read data button
@@ -718,7 +723,7 @@ class EmployeeManager {
    */
   async selectExcelFile() {
     try {
-      const result = await employeeService.selectExcelFile();
+      const result = await this.employeeService.selectExcelFile();
       
       if (result.success && result.filePath) {
         document.getElementById('selectedFilePath').value = result.filePath;
@@ -752,7 +757,7 @@ class EmployeeManager {
     Utils.showLoading(true);
     
     try {
-      const result = await employeeService.getExcelSheets(this.selectedFilePath);
+      const result = await this.employeeService.getExcelSheets(this.selectedFilePath);
       
       if (result.success) {
         const sheetSelect = document.getElementById('sheetSelect');
@@ -803,8 +808,6 @@ class EmployeeManager {
       sheetName: document.getElementById('sheetSelect').value,
       skipRows: parseInt(document.getElementById('skipRows').value) || 0,
       takeRows: parseInt(document.getElementById('takeRows').value) || 0,
-      columnCount: 5,
-      hasHeaders: true
     };
   }
 
@@ -822,7 +825,7 @@ class EmployeeManager {
     Utils.showLoading(true);
     
     try {
-      const result = await employeeService.previewExcelData(config);
+      const result = await this.employeeService.previewExcelData(config);
       
       if (result.success) {
         this.showPreviewData(result.data);
@@ -888,7 +891,7 @@ class EmployeeManager {
    */
   async readExcelData() {
     const config = this.getReadingConfig();
-    
+    Utils.showNotification('Anh bắt đầu đọc dữ liệu nè, bé đợi xíu nha!' + config, 'info');
     if (!config.filePath || !config.sheetName) {
       Utils.showNotification('Vui lòng chọn file và sheet!', 'error');
       return;
@@ -897,7 +900,7 @@ class EmployeeManager {
     Utils.showLoading(true);
     
     try {
-      const result = await employeeService.readExcelWithConfig(config);
+      const result = await this.this.employeeService.readExcelWithConfig(config);
       
       if (result.success) {
         this.employees = result.data;
@@ -932,13 +935,22 @@ class EmployeeManager {
    */
   showMainApplication() {
     // Show statistics
-    document.getElementById('statisticsBox').classList.remove('hidden');
+    const statisticsBox = document.getElementById('statisticsBox');
+    if (statisticsBox) {
+      statisticsBox.classList.remove('hidden');
+    }
     
-    // Show form section
-    document.querySelector('.form-section').classList.remove('hidden');
+    // Show form section (if exists)
+    const formSection = document.querySelector('.form-section');
+    if (formSection) {
+      formSection.classList.remove('hidden');
+    }
     
     // Show table section
-    document.querySelector('.table-section').classList.remove('hidden');
+    const tableSection = document.querySelector('.table-section');
+    if (tableSection) {
+      tableSection.classList.remove('hidden');
+    }
   }
 
   /**
@@ -1120,9 +1132,9 @@ class EmployeeManager {
     try {
       let result;
       if (this.modalMode === 'edit' && this.currentEmployee) {
-        result = await employeeService.updateEmployee(this.currentEmployee.id, employeeData);
+        result = await this.employeeService.updateEmployee(this.currentEmployee.id, employeeData);
       } else {
-        result = await employeeService.createEmployee(employeeData);
+        result = await this.employeeService.createEmployee(employeeData);
       }
       
       if (result.success) {
@@ -1155,7 +1167,7 @@ class EmployeeManager {
     Utils.showLoading(true);
     
     try {
-      const result = await employeeService.deleteEmployee(this.currentEmployee.id);
+      const result = await this.employeeService.deleteEmployee(this.currentEmployee.id);
       
       if (result.success) {
         Utils.showNotification('Nhân viên pay màu', 'success');
